@@ -146,8 +146,6 @@ def visualizar2():
 def modificar():
     global data
     if change.get()==1:
-        del data['USER_FIELD_1']
-        del data['USER_FIELD_3']
         data['USER_FIELD_1']=e2.get()
         print(data)
         export_file_path = filedialog.asksaveasfilename(defaultextension='.csv')
@@ -155,8 +153,6 @@ def modificar():
         del data['USER_FIELD_1']
 
     elif change.get()==2:
-        del data['USER_FIELD_1']
-        del data['USER_FIELD_3']
         data['USER_FIELD_3'] = e2.get()
         print(data)
         export_file_path = filedialog.asksaveasfilename(defaultextension='.csv')
@@ -285,7 +281,7 @@ mybuttoneve2.place(x=192,y=25)
 
 ###############################################################################################################
 
-mylabel3=Label(frame_3,text="UNIR VERTICAR ARCHIVOS SIMILARES",bg="gray70",font=("bold", 8))
+mylabel3=Label(frame_3,text="UNIR ARCHIVOS SIMILARES",bg="gray70",font=("bold", 8))
 mylabel3.place(x=2,y=1)
 
 mybuttoni3=Button(frame_3,text="IMPORTAR",padx=10,pady=8,fg="blue",bg="gray",command=getCSV3)
