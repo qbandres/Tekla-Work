@@ -2,7 +2,6 @@ from tkinter import *
 from tkinter import filedialog
 import pandas as pd
 from pandastable import Table, TableModel
-from glob import glob  ##para juntar los cvs
 import os
 
 
@@ -31,11 +30,11 @@ def export():
             df1.to_csv(export_file_path, index=False, header=True)
             del df['USER_FIELD_1']
         elif user.get()==2:
-            df['USER_FIELD_2'] = e.get()
-            df1 = df[['ID', 'USER_FIELD_2']]
+            df['USER_FIELD_3'] = e.get()
+            df1 = df[['ID', 'USER_FIELD_3']]
             export_file_path = filedialog.asksaveasfilename(defaultextension='.csv')
             df1.to_csv(export_file_path, index=False, header=True)
-            del df['USER_FIELD_2']
+            del df['USER_FIELD_3']
 
     elif tipo_1.get()==2:
         if user.get()==1:
@@ -47,12 +46,12 @@ def export():
             del df['USER_FIELD_1']
             del df['Item']
         elif user.get()==2:
-            df['USER_FIELD_2'] = e.get()
+            df['USER_FIELD_3'] = e.get()
             df['Item']=df.index+1
-            df=df[['Item','ID', 'PIECEMARK', 'BARCODE', 'ESP', 'PROFILE', 'DESCRIPTION', 'QUANTITY', 'WEIGHT','USER_FIELD_2']]
+            df=df[['Item','ID', 'PIECEMARK', 'BARCODE', 'ESP', 'PROFILE', 'DESCRIPTION', 'QUANTITY', 'WEIGHT','USER_FIELD_3']]
             export_file_path = filedialog.asksaveasfilename(defaultextension='.xlsx')
             df.to_excel(export_file_path, header=True,index=False)
-            del df['USER_FIELD_2']
+            del df['USER_FIELD_3']
             del df['Item']
 
 def exportCSV():
@@ -74,12 +73,12 @@ def visualizar():
             pt.show()
             del df['USER_FIELD_1']
         elif user.get()==2:
-            df['USER_FIELD_2'] = e.get()
-            df1 = df[['ID', 'USER_FIELD_2']]
+            df['USER_FIELD_3'] = e.get()
+            df1 = df[['ID', 'USER_FIELD_3']]
             frame1 = Toplevel()
             pt = Table(frame1, dataframe=df1)
             pt.show()
-            del df['USER_FIELD_2']
+            del df['USER_FIELD_3']
 
     elif tipo_1.get()==2:
         if user.get()==1:
@@ -92,13 +91,13 @@ def visualizar():
             del df['USER_FIELD_1']
             del df['Item']
         elif user.get()==2:
-            df['USER_FIELD_2'] = e.get()
+            df['USER_FIELD_3'] = e.get()
             df['Item']=df.index+1
-            df3=df[['Item','ID', 'PIECEMARK', 'BARCODE', 'ESP', 'PROFILE', 'DESCRIPTION', 'QUANTITY', 'WEIGHT','USER_FIELD_2']]
+            df3=df[['Item','ID', 'PIECEMARK', 'BARCODE', 'ESP', 'PROFILE', 'DESCRIPTION', 'QUANTITY', 'WEIGHT','USER_FIELD_3']]
             frame1 = Toplevel()
             pt = Table(frame1, dataframe=df3)
             pt.show()
-            del df['USER_FIELD_2']
+            del df['USER_FIELD_3']
             del df['Item']
 
 
@@ -144,9 +143,11 @@ def visualizar2():
     pt = Table(frame2,dataframe=data)
     pt.show()
 
-def cambiar():
+def modificar():
     global data
     if change.get()==1:
+        del data['USER_FIELD_1']
+        del data['USER_FIELD_3']
         data['USER_FIELD_1']=e2.get()
         print(data)
         export_file_path = filedialog.asksaveasfilename(defaultextension='.csv')
@@ -154,11 +155,13 @@ def cambiar():
         del data['USER_FIELD_1']
 
     elif change.get()==2:
-        data['USER_FIELD_2'] = e2.get()
+        del data['USER_FIELD_1']
+        del data['USER_FIELD_3']
+        data['USER_FIELD_3'] = e2.get()
         print(data)
         export_file_path = filedialog.asksaveasfilename(defaultextension='.csv')
         data.to_csv(export_file_path, header=True, index=False)
-        del data['USER_FIELD_2']
+        del data['USER_FIELD_3']
 
 def getCSV3():
     global matrixcsv
@@ -231,7 +234,7 @@ tipo_1.set('1')
 frame_1_2=Frame(frame_1,relief='sunken',bd=1.5,bg='gray65',width=60,height=55).place(x=275,y=60)
 user = IntVar() # Como StrinVar pero en entero
 Radiobutton(frame_1_2, text=".UF1 ", variable=user,value=1,bg='gray65').place(x=283,y=67)
-Radiobutton(frame_1_2, text=".UF2", variable=user,value=2,bg='gray65').place(x=283,y=90)
+Radiobutton(frame_1_2, text=".UF3", variable=user,value=2,bg='gray65').place(x=283,y=90)
 user.set('1')
 
 def on_click(event):
@@ -268,7 +271,7 @@ e2.place(x=5,y=70)
 frame_2_2=Frame(frame_2,relief='sunken',bd=1.5,bg='gray65',width=60,height=55).place(x=275,y=25)
 change = IntVar() # Como StrinVar pero en entero
 Radiobutton(frame_2_2, text="UF1 ", variable=change,value=1,bg='gray65').place(x=283,y=150)
-Radiobutton(frame_2_2, text="UF2", variable=change,value=2,bg='gray65').place(x=283,y=175)
+Radiobutton(frame_2_2, text="UF3", variable=change,value=2,bg='gray65').place(x=283,y=175)
 change.set('1')
 
 mybuttoni2=Button(frame_2,text="IMPORTAR",padx=10,pady=8,fg="blue",bg="gray",command=getCSV2)
@@ -277,12 +280,12 @@ mybuttoni2.place(x=5,y=25)
 mybuttoneve2=Button(frame_2,text=" VISUALIZAR ",padx=10,pady=8,fg="blue",bg="gray",command=visualizar2)
 mybuttoneve2.place(x=93,y=25)
 
-mybuttoneve2=Button(frame_2,text=" MODIF. ",padx=12,pady=8,fg="blue",bg="gray",command=cambiar)
+mybuttoneve2=Button(frame_2,text=" MODIF. ",padx=12,pady=8,fg="blue",bg="gray",command=modificar)
 mybuttoneve2.place(x=192,y=25)
 
 ###############################################################################################################
 
-mylabel3=Label(frame_3,text="JUNTAR ARCHIVOS DEL MISMO TITULO",bg="gray70",font=("bold", 8))
+mylabel3=Label(frame_3,text="UNIR VERTICAR ARCHIVOS SIMILARES",bg="gray70",font=("bold", 8))
 mylabel3.place(x=2,y=1)
 
 mybuttoni3=Button(frame_3,text="IMPORTAR",padx=10,pady=8,fg="blue",bg="gray",command=getCSV3)
