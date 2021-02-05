@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 import plotly.offline as po
 
 
-
 #LECTURA Y CAMBIO DE NOMBRES A LAS COLUMNAS
 
 root=Tk()
@@ -41,7 +40,7 @@ nb.add(Regre,text='Proyección')
 ################################General##################################################################################
 def importar():
 
-    global df, matrix, d_color,datafiltro
+    global df, matrix, d_color,datafiltro,df_dtr, df_dpa,df_dmo, df_dni,df_dpi,df_dpu
 
     import_file_path = filedialog.askopenfilename()
     df = pd.read_excel(import_file_path,sheet_name='Reporte', skiprows = 7)
@@ -137,13 +136,12 @@ def importar():
     matrix = pd.concat(
         [df_dtr.round(1), df_dpa.round(1), df_dmo.round(1), df_dni.round(1), df_dpi.round(1), df_dpu.round(1)], axis=0)
 
-    d_color = {'1-Traslado': 'green', '2-Ensamble': 'gray', '3-Montaje': '#00aae4', '4-Alineamiento': '#FF0000',
-               '5-Touch Up': '#9E19CF', '6-Punch List': '#D4CE4D'}
+    matrix['WBRUTO'] = np.where(matrix.Etapa!='3-Montaje', 0, matrix.WEIGHT)
 
-    # Asignar valores a una columna según diccionario
-    matrix['color'] = matrix['Etapa'].map(d_color)
+    np_array=matrix.to_numpy()
 
-
+    matrix=pd.DataFrame(data=np_array,columns=['ESP','ID','Barcode','WEIGHT','Ratio','Fecha','WPOND','HGan','Etapa','WBRUTO'])
+    matrix["Fecha"] = pd.to_datetime(matrix.Fecha).dt.date
 
 
     #########################infromacion general########################                                                INFORMACION GENERAL
@@ -164,32 +162,27 @@ def importar():
 def pbi1():                                                                                                              #FUNCION EXPORTAR PARA PBI
     global df, matrix
 
+    dfpbi=df[['ID','Barcode','WEIGHT','DTR','DPA','DMO','DNI','DPI','DPU','WTR','WPA','WMO','WNI','WPI','WPU']]
+
     export_file= filedialog.askdirectory()
-    df.to_csv(export_file+'/base.csv',index=False)
-    matrix.to_csv(export_file + '/base_powerbi.csv', header=True, index=False)
-
-
-
-
-
-
-
-
+    dfpbi.to_csv(export_file+'/Matriz.csv',index=False)
+    matrix.to_csv(export_file + '/QB_PBI.csv', header=True, index=False)
 
 ######################################################detalle###########################################################VENTANA DETALLE
 
 
 def filtrar():
 
-    global df, matrix, animatrix2, labela, labelb,datafiltro, gropSem
+    global animatrix2, info1, info2, info3, Nsemana
 
-
+    efechai = pd.to_datetime(fechai.get())
+    efechaf=pd.to_datetime(fechaf.get())
 
     ################################################INFI GENERAL                                                           #FILTRAR GENERAL
 
     animat=matrix
 
-    animat['filtro'] = np.where((qui1.get() == 1) & (animat['Etapa'] == "1-Traslado"),"positivo",'')     #APLICA FILTRO FECHA
+    animat['filtro'] = np.where((qui1.get() == 1) & (animat['Etapa'] == "1-Traslado"),"positivo",'')                    #APLICA FILTRO DE QUIEBRE
     filtro1=animat[animat['filtro']=='positivo']
     animat['filtro'] = np.where((qui2.get() == 1) & (animat['Etapa'] == "2-Ensamble"), "positivo", '')
     filtro2=animat[animat['filtro']=='positivo']
@@ -202,41 +195,28 @@ def filtrar():
     animat['filtro'] = np.where((qui6.get() == 1) & (animat['Etapa'] == "6-Punch List"), "positivo", '')
     filtro6=animat[animat['filtro']=='positivo']
 
-    animatrix = pd.concat([filtro1,filtro2,filtro3,filtro4,filtro5,filtro6], axis=0)
+    animatrix2 = pd.concat([filtro1,filtro2,filtro3,filtro4,filtro5,filtro6], axis=0)
 
+    animatrix2 = animatrix2[(animatrix2['Fecha'] >= efechai ) & (animatrix2['Fecha'] <= efechaf)]                          #SELECCION MONTAJE DIARIO
 
-    animatrix2 = animatrix[(animatrix['Fecha'] >= efechai.get() ) & (animatrix['Fecha'] <= efechaf.get())]                          #SELECCION MONTAJE DIARIO
+    animatrix=animatrix2[['Fecha','WPOND','WBRUTO']]
+    info1=animatrix.groupby(['Fecha']).sum()/1000         #crea el label2
+    info1['WPACUM']=info1['WPOND'].cumsum()
+    info1['WBACUM'] = info1['WBRUTO'].cumsum()
+    info1.reset_index(inplace=True)
 
-    infdia=animatrix2.groupby(['Fecha'])
-    pondia=infdia['WPOND'].sum()/1000
-    matrixtemp=animatrix2[animatrix2.Etapa=='3-Montaje']
-    matrixtemp['WBRUTO']=matrixtemp['WPOND'].div(d_pon['MO']*1000)
-    infodiab=matrixtemp.groupby(['Fecha'])
-    brutdia=infodiab['WBRUTO'].sum()
-
-    label2=pd.concat([pondia,brutdia],axis=1)
-    label2['FECHA'] = label2.index
-    label2=label2[['FECHA','WPOND','WBRUTO']]
-    label2['FECHA'] = label2["FECHA"].dt.strftime("%m/%d/%y")
-
-    label2.to_excel('label2.xlsx')
-
-
-    label2['WPACUM'] = label2.WPOND.cumsum()
-    label2['WBACUM'] = label2.WBRUTO.cumsum()
-    label2[['WPACUM','WBACUM']]=label2[['WPACUM','WBACUM']].fillna(method='ffill')
-    label2['WBRUTO'] = label2['WBRUTO'].fillna(0)
-    label2=label2.round(2)
+    info1=info1.round(2)
+    info1.fillna(0, inplace=True)
 
     tree = ttk.Treeview(General)
     tree.place(x=7, y=300)
-    tree['column'] = list(label2.columns)
+    tree['column'] = list(info1.columns)
     tree['show'] = 'headings'
     #loop trhu column
     for column in tree['column']:
         tree.heading(column,text=column)
 
-    df_rows=label2.to_numpy().tolist()
+    df_rows=info1.to_numpy().tolist()
     for row in df_rows:
         tree.insert("","end",values=row)
     tree.place(x=7,y=162)
@@ -249,40 +229,35 @@ def filtrar():
 
     ######################################frame 3#################                                                      #SELECCION POR ESP
 
-    espinfo=df.groupby(['ESP'])
-    espresum=espinfo['WEIGHT'].sum()/1000
-    esppon=animatrix2.groupby(['ESP'])
-    esppond=esppon['WPOND'].sum()/1000
-    matrixesp = matrixtemp.groupby(['ESP'])
-    espbruto = matrixesp['WBRUTO'].sum()
+    animatrix1 = animatrix2[['ESP', 'WPOND', 'WBRUTO']]
+    labelp=animatrix1.groupby(['ESP']).sum()/1000
+    labelp.reset_index(inplace=True)
 
-    label3=pd.concat([espresum,esppond,espbruto],axis=1,ignore_index=True)
+    espinfo=df[['ESP','WEIGHT']]
+    espresum=espinfo.groupby(['ESP']).sum()/1000
 
-    label3['ESP_N'] = label3.index
-    label3.reset_index(drop=True, inplace=True)
-    np_array=label3.to_numpy()
-    label3=pd.DataFrame(data=np_array,columns=['TOTAL','WPOND','WBRUTO','ESP'])
+    labelp.set_index('ESP', inplace = True)
 
-    label3=label3[['ESP','TOTAL','WPOND','WBRUTO']]
+    info2=pd.concat([espresum,labelp],axis=1)      #creas el label3
+    info2.rename(columns={'WEIGHT': 'Total'},inplace=True)
 
 
-
-    label3['WPOND%']=label3.WPOND/label3.TOTAL*100
-    label3['WBRUTO%'] = label3.WBRUTO / label3.TOTAL * 100
-
-    label3=label3.fillna(0)
-    label3=label3.round(2)
+    info2['Pond%']=info2.WPOND/info2.Total*100
+    info2['Bruto%'] = info2.WBRUTO / info2.Total * 100
+    info2.reset_index(inplace=True)
+    info2=info2.round(2)
+    info2.fillna(0,inplace=True)
 
     tree2 = ttk.Treeview(General)
     tree2.place(x=7, y=300)
-    tree2['column'] = list(label3.columns)
+    tree2['column'] = list(info2.columns)
     tree2['show'] = 'headings'
     #loop trhu column
     for column in tree2['column']:
         tree2.heading(column,text=column)
 
-    df_rows=label3.to_numpy().tolist()
-    for row in df_rows:
+    df_rows1=info2.to_numpy().tolist()
+    for row in df_rows1:
         tree2.insert("","end",values=row)
     tree2.place(x=7,y=440)
 
@@ -293,16 +268,13 @@ def filtrar():
     tree2.column("#5", width=70, minwidth=70, stretch=tk.NO)
     tree2.column("#6", width=70, minwidth=70, stretch=tk.NO)
 
-    labela=label2
-    labelb=label3
-
     ##label resultados
-    labelinfaa = Label(General, text=round(pondia.sum(), 2), bg='#BDBDBD').place(x=87, y=392)
-    labelinfab = Label(General, text=round(brutdia.sum(), 2), bg='#BDBDBD').place(x=155, y=392)
+    labelinfaa = Label(General, text=round(info1['WPOND'].sum(), 2), bg='#BDBDBD').place(x=87, y=392)
+    labelinfab = Label(General, text=round(info1['WBRUTO'].sum(), 2), bg='#BDBDBD').place(x=155, y=392)
 
-    labelinfae = Label(General, text=round(espresum.sum(), 2), bg='#BDBDBD').place(x=80, y=670)
-    labelinfaf = Label(General, text=round(esppond.sum(), 2), bg='#BDBDBD').place(x=138, y=670)
-    labelinfag = Label(General, text=round(espbruto.sum(), 2), bg='#BDBDBD').place(x=192, y=670)
+    labelinfae = Label(General, text=round(info2['Total'].sum(), 2), bg='#BDBDBD').place(x=80, y=670)
+    labelinfaf = Label(General, text=round(info2['WPOND'].sum(), 2), bg='#BDBDBD').place(x=138, y=670)
+    labelinfag = Label(General, text=round(info2['WBRUTO'].sum(), 2), bg='#BDBDBD').place(x=192, y=670)
     #####################SEMANA
 
     #####CREAR DF NRO SEMANA#######
@@ -314,38 +286,34 @@ def filtrar():
     Nsemana['Semana'] = Nsemana.SEMANA // 7 + 1
     del Nsemana['SEMANA']
 
-    animatrix3=labela[['WPOND','WBRUTO']]
+    animatrix0=info1[['Fecha','WPOND','WBRUTO']]
+    animatrix0.set_index('Fecha', inplace = True)
 
-    filtro_sem=pd.concat([Nsemana,animatrix3],axis=1)   #Juntamos la nueva matriz con la del montaje diario
-
-
-    gropSem=filtro_sem.groupby(['Semana']).sum()        #Agrupamod por Semana
-    gropSem=gropSem[(gropSem['WPOND'] != 0) | (gropSem['WBRUTO'] != 0)]  #Limpiamos la matriz de los ceros
-
-    gropSem['Semana'] =gropSem.index
-    gropSem=gropSem[['Semana','WPOND','WBRUTO']]
-    gropSem = gropSem.round(2)
+    filtro_sem=pd.concat([Nsemana,animatrix0],axis=1)   #Juntamos la nueva matriz con la del montaje diario
 
 
+    info3=filtro_sem.groupby(['Semana']).sum()        #Agrupamod por Semana
+    info3=info3[(info3['WPOND'] != 0) | (info3['WBRUTO'] != 0)]  #Limpiamos la matriz de los ceros
+    info3.reset_index(inplace=True)
+    info3=info3.round(2)
 
 
     tree3 = ttk.Treeview(General)
     tree3.pack()
-    tree3['column'] = list(gropSem.columns)
+    tree3['column'] = list(info3.columns)
     tree3['show'] = 'headings'
     # loop trhu column
     for column in tree3['column']:
         tree3.heading(column, text=column)
 
-    df_rows = gropSem.to_numpy().tolist()
-    for row in df_rows:
+    df_rows3 = info3.to_numpy().tolist()
+    for row in df_rows3:
         tree3.insert("", "end", values=row)
     tree3.place(x=494, y=440)
 
     tree3.column("#1", width=75, minwidth=75, stretch=tk.NO)
     tree3.column("#2", width=70, minwidth=70, stretch=tk.NO)
     tree3.column("#3", width=70, minwidth=70, stretch=tk.NO)
-
 
     desl1 = ttk.Scrollbar(General, orient="vertical", command=tree.yview)
     desl1.place(x=389, y=163, height=225)
@@ -362,35 +330,13 @@ def filtrar():
 
 
 def reporte():                                                                                                              #FUNCION EXPORTAR PARA PBI
-    global animatrix2, matrix,labela,labelb,datafiltro
-    print(labela)
-    print(labelb)
-    labela1=labela
+    global animatrix2,info1,info2,info3, Nsemana
 
-    animatrix2["Fecha"] = pd.to_datetime(animatrix2.Fecha).dt.date
-    labela['FECHA']=pd.to_datetime(labela.FECHA).dt.date
-    labela1['Year_month'] = pd.to_datetime(labela1['FECHA']).dt.to_period('M')
-    grouplabela1=labela1.groupby(['Year_month'])
-    summalabela1=grouplabela1['WPOND','WBRUTO'].sum()
+    yminfo1=info1[['Fecha','WPOND','WBRUTO']]
+    yminfo1['Year_month'] = pd.to_datetime(yminfo1['Fecha']).dt.to_period('M')  # get month an year
 
-    #####CREAR DF NRO SEMANA#######
-    s = pd.date_range(start='2019-04-12', periods=1200, freq='D')
-    Nsemana = pd.DataFrame(s, columns=['Fecha'])
-    Nsemana['SEMANA'] = Nsemana.index
-    Nsemana["Fecha"] = pd.to_datetime(Nsemana.Fecha).dt.date
-    Nsemana.set_index('Fecha', inplace=True)
-    Nsemana['Semana'] = Nsemana.SEMANA // 7 + 1
-    del Nsemana['SEMANA']
-
-    animatrix3=labela1[['WPOND','WBRUTO']]
-
-    filtro_sem=pd.concat([Nsemana,animatrix3],axis=1)   #Juntamos la nueva matriz con la del montaje diario
-
-
-    gropSem=filtro_sem.groupby(['Semana']).sum()        #Agrupamod por Semana
-    gropSem=gropSem[(gropSem['WPOND'] != 0) | (gropSem['WBRUTO'] != 0)]  #Limpiamos la matriz de los ceros
-
-
+    filtro_mes=yminfo1.groupby(['Year_month']).sum()
+    filtro_mes.reset_index(inplace=True)
 
     export_file= filedialog.askdirectory()                              #Buscamos el directorio para gruafar
 
@@ -398,73 +344,66 @@ def reporte():                                                                  
     writer = pd.ExcelWriter(export_file + '/' + 'Reporte.xlsx')
 
     # Write each dataframe to a different worksheet.
-    animatrix2.to_excel(writer, sheet_name='General',index=False)
-    labela.to_excel(writer, sheet_name='Dia',index=False)
-    summalabela1.to_excel(writer, sheet_name='Mes')
-    gropSem.to_excel(writer, sheet_name='Semana')
-
-    labelb.to_excel(writer, sheet_name='ESP')
+    animatrix2.to_excel(writer, sheet_name='General',index=True)
+    info1.to_excel(writer, sheet_name='Dia',index=False)
+    filtro_mes.to_excel(writer, sheet_name='Mes',index=False)
+    info3.to_excel(writer, sheet_name='Semana')
+    info2.to_excel(writer, sheet_name='ESP')
 
     # Close the Pandas Excel writer and output the Excel file.
     writer.save()
 
 def pintadog2():                                                                                                         #FUNCION EXPORTAR PARA PINTAR
-    global df, matrix
+    global animatrix2
 
-    #fechain = pd.to_datetime(efechai.get())
-    #fechaout=pd.to_datetime(efechaf.get())
+    pintado=animatrix2[['ID','Etapa']]
 
-    ##CREAMOS LAS CARPETAS PARA TEKLA
-
-    pint_dtr = df[['ID', 'DTR']].dropna()
-    pint_dtr = pint_dtr[(pint_dtr['DTR'] >= efechai.get()) & (pint_dtr['DTR'] <= efechaf.get())]
+    pint_dtr = pintado[pintado.Etapa == '1-Traslado']
     pint_dtr['USER_FIELD_1'] = 'dtr_'+euser.get()
-    pint_dtr = pint_dtr[['ID', 'USER_FIELD_1']]
+    del pint_dtr['Etapa']
 
-    pint_dpa = df[['ID', 'DPA']].dropna()
-    pint_dpa = pint_dpa[(pint_dpa['DPA'] >= efechai.get()) & (pint_dpa['DPA'] <= efechaf.get())]
-    pint_dpa['USER_FIELD_1'] = 'dpa_'+euser.get()
-    pint_dpa = pint_dpa[['ID', 'USER_FIELD_1']]
 
-    pint_dmo = df[['ID', 'DMO']].dropna()
-    pint_dmo = pint_dmo[(pint_dmo['DMO'] >= efechai.get()) & (pint_dmo['DMO'] <= efechaf.get())]
-    pint_dmo['USER_FIELD_1'] = 'dmo_'+euser.get()
-    pint_dmo = pint_dmo[['ID', 'USER_FIELD_1']]
+    pint_dpa = pintado[pintado.Etapa == '2-Ensamble']
+    pint_dpa['USER_FIELD_1'] = 'dpa_' + euser.get()
+    del pint_dpa['Etapa']
 
-    pint_dni = df[['ID', 'DNI']].dropna()
-    pint_dni = pint_dni[(pint_dni['DNI'] >= efechai.get()) & (pint_dni['DNI'] <= efechaf.get())]
-    pint_dni['USER_FIELD_1'] = 'dni_'+euser.get()
-    pint_dni = pint_dni[['ID', 'USER_FIELD_1']]
+    pint_dmo = pintado[pintado.Etapa == '3-Montaje']
+    pint_dmo['USER_FIELD_1'] = 'dmo_' + euser.get()
+    del pint_dmo['Etapa']
 
-    pint_dpi = df[['ID', 'DPI']].dropna()
-    pint_dpi = pint_dpi[(pint_dpi['DPI'] >= efechai.get()) & (pint_dpi['DPI'] <= efechaf.get())]
-    pint_dpi['USER_FIELD_1'] = 'dpi_'+euser.get()
-    pint_dpi = pint_dpi[['ID', 'USER_FIELD_1']]
+    pint_dni = pintado[pintado.Etapa == '4-Alineamiento']
+    pint_dni['USER_FIELD_1'] = 'dtr_' + euser.get()
+    del pint_dni['Etapa']
 
-    pint_dpu = df[['ID', 'DPU']].dropna()
-    pint_dpu = pint_dpu[(pint_dpu['DPU'] >= efechai.get()) & (pint_dpu['DPU'] <= efechaf.get())]
-    pint_dpu['USER_FIELD_1'] = 'dpu_'+euser.get()
-    pint_dpu = pint_dpu[['ID', 'USER_FIELD_1']]
+    pint_dpi = pintado[pintado.Etapa == '5-Touch Up']
+    pint_dpi['USER_FIELD_1'] = 'dpi_' + euser.get()
+    del pint_dpi['Etapa']
+
+    pint_dpu = pintado[pintado.Etapa == '6-Punch List']
+    pint_dpu['USER_FIELD_1'] = 'dpu_' + euser.get()
+    del pint_dpu['Etapa']
 
     export_file= filedialog.askdirectory()
+
     # Exportar para tekla
-    pint_dtr.to_csv(export_file+'/f_dtr_tekla.csv', index=False)
-    pint_dpa.to_csv(export_file+'/f_dpa_tekla.csv', index=False)
-    pint_dmo.to_csv(export_file+'/f_dmo_tekla.csv', index=False)
-    pint_dni.to_csv(export_file+'/f_dni_tekla.csv', index=False)
-    pint_dpi.to_csv(export_file+'/f_dpi_tekla.csv', index=False)
-    pint_dpu.to_csv(export_file+'/f_dpu_tekla.csv', index=False)
+    pint_dtr.to_csv(export_file+'/dtr_tekla.csv', index=False)
+    pint_dpa.to_csv(export_file+'/dpa_tekla.csv', index=False)
+    pint_dmo.to_csv(export_file+'/dmo_tekla.csv', index=False)
+    pint_dni.to_csv(export_file+'/dni_tekla.csv', index=False)
+    pint_dpi.to_csv(export_file+'/dpi_tekla.csv', index=False)
+    pint_dpu.to_csv(export_file+'/dpu_tekla.csv', index=False)
+
 
 def graficos():
-    global df, matrix, labela,labelb, gropSem
+    global animatrix2, info1, info2, info3
 
     if combo.get()=="Montaje Diario":
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=labela.index, y=labela.WPOND,
+        fig.add_trace(go.Scatter(x=info1.Fecha, y=info1.WPOND,
                                  mode='lines+markers',
                                  name='lines+markers'))
-        fig.add_trace(go.Scatter(x=labela.index, y=labela.WBRUTO,
+        fig.add_trace(go.Scatter(x=info1.Fecha, y=info1.WBRUTO,
                                  mode='lines+markers',
                                  name='lines+markers'))
 
@@ -474,10 +413,10 @@ def graficos():
     elif combo.get()=="Montaje Semanal":
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=labela.index, y=gropSem.WPOND,
+        fig.add_trace(go.Scatter(x=info3.Semana, y=info3.WPOND,
                                  mode='lines+markers',
                                  name='lines+markers'))
-        fig.add_trace(go.Scatter(x=labela.index, y=gropSem.WBRUTO,
+        fig.add_trace(go.Scatter(x=info3.Semana, y=info3.WBRUTO,
                                  mode='lines+markers',
                                  name='lines+markers'))
 
@@ -485,27 +424,30 @@ def graficos():
 
     elif combo.get()=='Montaje Diario Acumulado':
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=labela.index, y=labela.WPACUM,
+        fig.add_trace(go.Scatter(x=info1.Fecha, y=info1.WPACUM,
                                  mode='lines+markers',
                                  name='lines+markers'))
-        fig.add_trace(go.Scatter(x=labela.index, y=labela.WBACUM,
+        fig.add_trace(go.Scatter(x=info1.Fecha, y=info1.WBACUM,
                                  mode='lines+markers',
                                  name='lines+markers'))
         fig.show()
 
 
 
-
-
-
     elif combo.get() == "Montaje por ESP":
         fig = go.Figure(data=[
-            go.Bar(name='Montaje Ponderado', x=labelb.ESP, y=labelb.WPOND),
-            go.Bar(name='Montaje Bruto', x=labelb.ESP, y=labelb.WBRUTO),
-            go.Bar(name='Total', x=labelb.ESP, y=labelb.TOTAL)
+            go.Bar(name='Montaje Ponderado', x=info2.ESP, y=info2.WPOND),
+            go.Bar(name='Montaje Bruto', x=info2.ESP, y=info2.WBRUTO),
+            go.Bar(name='Total', x=info2.ESP, y=info2.Total)
         ])
         # Change the bar mode
         fig.update_layout(barmode='group', xaxis_tickangle=-45)
+        fig.show()
+
+    elif combo.get()=='Por Quiebre':
+
+        import plotly.express as px
+        fig = px.area(animatrix2, x="Fecha", y="WPOND", color="Etapa")
         fig.show()
 
 
@@ -519,8 +461,6 @@ labelinfa1 = Label(General, text=' Pond:', bg='gray60').place(x=15, y=64)
 labelinfa2 = Label(General, text='   Brut:', bg='gray60').place(x=15, y=86)
 labelinfa3 = Label(General, text=' Pond% :', bg='gray60').place(x=130, y=64)
 labelinfa4 = Label(General, text='   Brut% :', bg='gray60').place(x=130, y=86)
-
-
 
 
 button_importg=Button(General, text='IMPORTAR', width=18, height=7, bg='steelblue4', command=importar).place(x=260, y=9)
@@ -543,20 +483,16 @@ euser.bind('<Button-1>',on_click)
 euser.place(x=532,y=132)
 
 
-
 #etiq2_3=Label(General, text='Ingrese Fechas', padx=10, pady=9, bg=d_color['fondobg']).place(x=430, y=312)                    #Button Filtrar
 etiq2_4=Label(General, text='Inicio', padx=10, pady=9, bg=d_color['fondobg']).place(x=405, y=340)
 etiq2_5=Label(General, text='Final', padx=10, pady=9, bg=d_color['fondobg']).place(x=405, y=370)
 
-efechai=DateEntry(General, width=20, bg='blue', date_pattern='yyyy/MM/dd', year=2019, month=10, day=1)
-efechai.place(x=455,y=350)
+fechai=DateEntry(General, width=20, bg='blue', date_pattern='yyyy/MM/dd', year=2019, month=10, day=1)
+fechai.place(x=455,y=350)
 
-
-efechaf=DateEntry(General, width=20, bg='blue', date_pattern='yyyy/MM/dd', year=2021, month=2, day=28)
-efechaf.place(x=455,y=380)
-
-
-                                                                                                                       #RESUMEN GENERAL
+fechaf=DateEntry(General, width=20, bg='blue', date_pattern='yyyy/MM/dd', year=2021, month=2, day=28)
+fechaf.place(x=455,y=380)
+                                                                                                                     #RESUMEN GENERAL
 frame2_2=Frame(General, width=395, height=229, bg=d_color['framebg'], relief='sunken', bd=2).place(x=5, y=161)
 frame2_3=Frame(General, width=395, height=229, bg=d_color['framebg'], relief='sunken', bd=2).place(x=5, y=439)
 frame2_4=Frame(General, width=236, height=229, bg=d_color['framebg'], relief='sunken', bd=2).place(x=493, y=439)
@@ -590,17 +526,11 @@ chekqu5.place(x=412,y=270)
 chekqu6=Checkbutton(General, text='Punch-Lis', variable=qui6, bg=d_color['fondobg'])
 chekqu6.place(x=412,y=295)
 
-
-
 ###combo box
 combo = ttk.Combobox(General, state="readonly")
 combo.place(x=570,y=280)
-combo["values"] = ["Montaje Diario", "Montaje Semanal", "Montaje por ESP",'Montaje Diario Acumulado']
+combo["values"] = ["Montaje Diario", "Montaje Semanal", "Montaje por ESP",'Montaje Diario Acumulado','Por Quiebre']
 combo.current(0)
-
-
-
-
 
 
 root.mainloop()
