@@ -6,9 +6,6 @@ from tkinter import ttk
 import numpy as np
 from tkcalendar import*
 import plotly.graph_objects as go
-import plotly.offline as po
-
-
 
 #LECTURA Y CAMBIO DE NOMBRES A LAS COLUMNAS
 
@@ -33,9 +30,6 @@ General=ttk.Frame(nb, style='TLabelframe')
 Regre=ttk.Frame(nb,style='TLabelframe')
 nb.add(General, text='General')
 nb.add(Regre,text='Proyección')
-
-
-
 
 
 ################################General##################################################################################
@@ -470,107 +464,6 @@ def graficos():
                           ))
         fig.show()
 
-    elif combo.get()=='Por Quiebre':
-
-        grafi = animatrix2[['Fecha', 'Etapa','WPOND']]
-
-        grafdtr = grafi[grafi.Etapa == '1-Traslado']
-        grafdtr.set_index('Fecha', inplace = True)
-        grafdtr['dtrA']=grafdtr['WPOND'].cumsum()
-
-
-        grafdpa = grafi[grafi.Etapa == '2-Ensamble']
-        grafdpa.set_index('Fecha', inplace=True)
-        grafdpa['dpaA']=grafdpa['WPOND'].cumsum()
-
-        grafdmo = grafi[grafi.Etapa == '3-Montaje']
-        grafdmo.set_index('Fecha', inplace=True)
-        grafdmo['dmoA'] = grafdmo['WPOND'].cumsum()
-
-        grafdni = grafi[grafi.Etapa == '4-Alineamiento']
-        grafdni.set_index('Fecha', inplace=True)
-        grafdni['dniA'] = grafdni['WPOND'].cumsum()
-
-
-        grafdpi = grafi[grafi.Etapa == '5-Touch Up']
-        grafdpi.set_index('Fecha', inplace=True)
-        grafdpi['dpiA'] = grafdpi['WPOND'].cumsum()
-
-        grafdpu = grafi[grafi.Etapa == '6-Punch List']
-        grafdpu.set_index('Fecha', inplace=True)
-        grafdpu['dpuA'] = grafdpu['WPOND'].cumsum()
-
-        grafdmo.to_excel('mont.xlsx')
-        grafdtr.to_excel('tras.xlsx')
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=grafdtr.index,
-            y=grafdtr.dtrA,
-            hoverinfo='x+y',
-            mode='lines',
-            name='Traslado',
-            line=dict(width=0.5, color='rgb(131, 90, 241)'),
-            stackgroup='one'  # define stack group
-        ))
-        fig.add_trace(go.Scatter(
-            x=grafdpa.index,
-            y=grafdpa.dpaA,
-            hoverinfo='x+y',
-            mode='lines',
-            name='Ensamble',
-            line=dict(width=0.5, color='rgb(111, 231, 219)'),
-            stackgroup='one'
-        ))
-        fig.add_trace(go.Scatter(
-            x=grafdmo.index,
-            y=grafdmo.dmoA,
-            hoverinfo='x+y',
-            mode='lines',
-            name='Monatje',
-            line=dict(width=0.5, color='rgb(14, 147, 312)'),
-            stackgroup='one'
-        ))
-        fig.add_trace(go.Scatter(
-            x=grafdni.index,
-            y=grafdni.dniA,
-            hoverinfo='x+y',
-            mode='lines',
-            name='Alineamiento',
-            line=dict(width=0.5, color='blue'),
-            stackgroup='one'
-        ))
-        fig.add_trace(go.Scatter(
-            x=grafdpi.index,
-            y=grafdpi.dpiA,
-            hoverinfo='x+y',
-            mode='lines',
-            name='Torque',
-            line=dict(width=0.5, color='red'),
-            stackgroup='one'
-        ))
-        fig.add_trace(go.Scatter(
-            x=grafdpu.index,
-            y=grafdpu.dpuA,
-            hoverinfo='x+y',
-            mode='lines',
-            name='Touch Up',
-            line=dict(width=0.5, color='gray'),
-            stackgroup='one'
-        ))
-
-        fig.update_layout(
-            showlegend=True,
-            xaxis_type='category',
-            yaxis=dict(
-                type='linear'
-            ))
-        fig.show()
-
-
-
-
-
 
 ########################################################################################################################button importar
 frameresumen=Frame(General, width=250, height=116, bg=d_color['framebg'], relief='sunken', bd=2).place(x=5, y=10)
@@ -660,10 +553,6 @@ combo = ttk.Combobox(General, state="readonly")
 combo.place(x=570,y=280)
 combo["values"] = ["Montaje Diario", "Montaje Semanal", "Montaje por ESP",'Montaje Diario Acumulado']
 combo.current(0)
-
-
-
-
 
 
 root.mainloop()
